@@ -6,38 +6,43 @@ from app.models.caixa_config import CaixaConfig
 from app.config.settings import CATEGORIAS_PADRAO
 
 
-def process_login(username, password):
-    """Retorna (sucesso: bool, dados: dict)."""
-    if not username or not password:
-        return False, {"error": "Usuário e senha são obrigatórios"}
+def process_login(email, password):
+    """Autentica usuário (por email) e inicializa dados mínimos de sessão."""
+    if not email or not password:
+        return False, {"error": "Email e senha são obrigatórios"}
 
-    user = Usuario.query.filter_by(username=username).first()
+    user = Usuario.query.filter_by(email=email).first()
     if user and user.check_password(password):
         session["user_id"] = user.id
-        session["username"] = user.username
+        session["username"] = user.email
         return True, {}
 
-    return False, {"error": "Usuário ou senha inválidos"}
+    return False, {"error": "Email ou senha inválidos"}
 
 
-def process_register(username, password):
-    """Retorna (sucesso: bool, dados: dict)."""
-    if not username or not password:
+def process_register(email, password):
+    """Cria conta (registrando email) com categorias padrão e configuração inicial de caixa."""
+    if not email or not password:
         return False, {
-            "reg_error": "Usuário e senha são obrigatórios",
+            "reg_error": "Email e senha são obrigatórios",
             "show_register": True,
         }
-    if len(password) < 6:
+    if len(email) > 254:
         return False, {
-            "reg_error": "A senha deve ter ao menos 6 caracteres",
+            "reg_error": "Email muito longo (máx. 254 caracteres)",
+            "show_register": True,
+        }
+    if len(password) < 8:
+        return False, {
+            "reg_error": "A senha deve ter ao menos 8 caracteres",
             "show_register": True,
         }
 
-    existing = Usuario.query.filter_by(username=username).first()
+    existing = Usuario.query.filter_by(email=email).first()
     if existing:
-        return False, {"reg_error": "Nome de usuário já existe", "show_register": True}
+        return False, {"reg_error": "Email já existe", "show_register": True}
 
-    user = Usuario(username=username)
+    user = Usuario(email=email)
     user.set_password(password)
     db.session.add(user)
     db.session.flush()
